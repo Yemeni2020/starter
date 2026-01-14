@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\ColorController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -9,5 +12,39 @@ Route::get('/', function () {
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+Route::middleware(['auth', 'verified'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::view('/', 'admin.dashboard')->name('dashboard');
+
+        Route::get('products', [ProductController::class, 'index'])->name('products.index');
+        Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
+        Route::post('products', [ProductController::class, 'store'])->name('products.store');
+        Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+        Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
+
+        Route::get('colors', [ColorController::class, 'index'])->name('colors.index');
+        Route::get('colors/create', [ColorController::class, 'create'])->name('colors.create');
+        Route::post('colors', [ColorController::class, 'store'])->name('colors.store');
+        Route::get('colors/{color}/edit', [ColorController::class, 'edit'])->name('colors.edit');
+        Route::put('colors/{color}', [ColorController::class, 'update'])->name('colors.update');
+        Route::delete('colors/{color}', [ColorController::class, 'destroy'])->name('colors.destroy');
+
+        Route::view('categories', 'admin.categories.index')->name('categories.index');
+        Route::view('categories/create', 'admin.categories.create')->name('categories.create');
+        Route::view('categories/{category}/edit', 'admin.categories.edit')->name('categories.edit');
+
+        Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::post('settings/seo', [SettingsController::class, 'updateSeo'])->name('settings.seo');
+    });
+
+Route::middleware(['auth', 'verified'])
+    ->prefix('account')
+    ->name('account.')
+    ->group(function () {
+        Route::view('orders/{order}', 'admin.orders.index')->name('orders.show');
+    });
 
 require __DIR__.'/settings.php';
