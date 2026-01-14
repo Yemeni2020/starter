@@ -16,14 +16,31 @@
             const placeholder = root.querySelector('[data-dropdown-placeholder]');
             const chipsWrap = root.querySelector('[data-dropdown-chips]');
             const hiddenWrap = root.querySelector('[data-hidden-inputs]');
-            const checkboxes = Array.from(root.querySelectorAll('[data-color-checkbox]'));
             const clearBtn = root.querySelector('[data-clear]');
             const doneBtn = root.querySelector('[data-done]');
 
             if (!trigger || !panel || !hiddenWrap) return;
 
-            const close = () => panel.classList.add('hidden');
-            const toggle = () => panel.classList.toggle('hidden');
+            const getCheckboxes = () =>
+                Array.from(root.querySelectorAll('[data-color-checkbox]'));
+
+            const close = () => {
+                panel.classList.add('hidden');
+                trigger.setAttribute('aria-expanded', 'false');
+            };
+
+            const open = () => {
+                panel.classList.remove('hidden');
+                trigger.setAttribute('aria-expanded', 'true');
+            };
+
+            const toggle = () => {
+                if (panel.classList.contains('hidden')) {
+                    open();
+                } else {
+                    close();
+                }
+            };
 
             const syncHiddenInputs = (ids) => {
                 hiddenWrap.innerHTML = '';
@@ -37,7 +54,7 @@
             };
 
             const render = () => {
-                const selected = checkboxes
+                const selected = getCheckboxes()
                     .filter((cb) => cb.checked)
                     .map((cb) => ({ id: cb.value, name: cb.dataset.colorName || cb.value }));
 
@@ -63,6 +80,7 @@
 
             render();
 
+            trigger.setAttribute('aria-expanded', 'false');
             trigger.addEventListener('click', (e) => {
                 e.preventDefault();
                 toggle();
@@ -70,13 +88,18 @@
 
             doneBtn?.addEventListener('click', close);
             clearBtn?.addEventListener('click', () => {
-                checkboxes.forEach((cb) => (cb.checked = false));
+                getCheckboxes().forEach((cb) => (cb.checked = false));
                 render();
             });
-            checkboxes.forEach((cb) => cb.addEventListener('change', render));
 
-            document.addEventListener('click', (e) => {
-                if (!root.contains(e.target)) close();
+            panel.addEventListener('change', (event) => {
+                if (event.target?.matches('[data-color-checkbox]')) {
+                    render();
+                }
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!root.contains(event.target)) close();
             });
         });
     };
