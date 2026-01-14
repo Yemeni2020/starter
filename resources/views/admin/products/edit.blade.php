@@ -110,26 +110,10 @@
                             </flux:select>
                             <flux:input name="color" label="Color" placeholder="Black" value="{{ old('color', $product->color) }}" />
                         </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Color options</label>
-                            <select
-                                name="color_ids[]"
-                                multiple
-                                class="block h-40 w-full rounded-xl border border-zinc-200 bg-white p-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring focus:ring-blue-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-                                aria-describedby="colorOptionsHelpEdit"
-                            >
-                                @if ($colors->isEmpty())
-                                    <option disabled>No colors defined yet</option>
-                                @else
-                                    @foreach ($colors as $color)
-                                        <option value="{{ $color->id }}" {{ in_array($color->id, $selectedColorIds) ? 'selected' : '' }}>
-                                            {{ $color->name }}{{ $color->hex ? " ({$color->hex})" : '' }}
-                                        </option>
-                                    @endforeach
-                                @endif
-                            </select>
-                            <p id="colorOptionsHelpEdit" class="text-xs text-slate-500 dark:text-slate-400">Hold Ctrl (Windows) or Command (Mac) while selecting to choose multiple colors.</p>
-                        </div>
+                        @include('admin.products.partials.color-options', [
+                            'colors' => $colors,
+                            'selectedColorIds' => $selectedColorIds,
+                        ])
                         <flux:input name="sku" label="SKU" value="{{ $product->sku }}" required />
                     </div>
                 </div>
