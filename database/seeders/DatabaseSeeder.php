@@ -3,8 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\ColorSeeder;
+use Database\Seeders\AttributeDefinitionSeeder;
+use Database\Seeders\DemoCatalogSeeder;
+use Database\Seeders\ProductSeeder;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,11 +18,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        User::firstOrCreate(
+            ['email' => 'demo@example.com'],
+            [
+                'name' => 'Demo Customer',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            ColorSeeder::class,
+            AttributeDefinitionSeeder::class,
+            ProductSeeder::class,
         ]);
+
+        if (app()->environment(['local', 'development'])) {
+            $this->call(DemoCatalogSeeder::class);
+        }
     }
 }
