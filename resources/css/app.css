@@ -64,3 +64,8 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+@layer utilities {
+    [dir="rtl"] .rtl\:space-x-reverse > :not([hidden]) ~ :not([hidden]) {
+        --tw-space-x-reverse: 1;
+    }
+}
