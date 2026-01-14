@@ -84,7 +84,9 @@
                                                 {{ $code === $defaultLocale
                                                     ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-50'
                                                     : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50' }}"
-                                            data-product-tab="{{ $code }}">
+                                            data-product-tab="{{ $code }}"
+                                            data-tab-active="bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-50"
+                                            data-tab-inactive="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
                                             {{ strtoupper($code) }}
                                         </button>
                                     @endforeach

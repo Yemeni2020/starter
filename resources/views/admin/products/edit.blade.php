@@ -72,6 +72,8 @@
                                     type="button"
                                     class="product-tab rounded-full border border-zinc-200 px-4 py-1 text-sm font-semibold transition {{ $code === $defaultLocale ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:border-slate-400' }}"
                                     data-product-tab="{{ $code }}"
+                                    data-tab-active="bg-slate-900 text-white"
+                                    data-tab-inactive="bg-white text-slate-600 hover:border-slate-400"
                                 >
                                     {{ strtoupper($code) }} {{ $label }}
                                 </button>

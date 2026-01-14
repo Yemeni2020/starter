@@ -120,7 +120,8 @@
         const generateSkuButton = form.querySelector('#generateSkuButton');
         const skuInput = form.querySelector('#skuInput');
         const nameInput = form.querySelector('[data-name-input]');
-        const localeNameInput = form.querySelector('[data-name-locale-input]');
+        const defaultLocaleNameInput = form.querySelector('[data-name-locale-input]');
+        const storageKey = 'admin.productForm.locale';
 
         let slugTouched = false;
         let slugTimer = null;
@@ -134,6 +135,14 @@
             };
         };
 
+        const syncDefaultLocaleName = () => {
+            if (!nameInput || !defaultLocaleNameInput) return;
+            if (defaultLocaleNameInput.value !== nameInput.value) {
+                defaultLocaleNameInput.value = nameInput.value;
+                defaultLocaleNameInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        };
+
         const resolveActivePanel = () =>
             form.querySelector('[data-locale-panel]:not(.hidden)') ||
             form.querySelector('[data-locale-panel]');
@@ -141,14 +150,6 @@
         const getSlugInput = () => {
             const panel = resolveActivePanel();
             return panel ? panel.querySelector('input[id^="slug"]') : null;
-        };
-
-        const getLocaleNameInput = () => {
-            const panel = resolveActivePanel();
-            return panel
-                ? panel.querySelector('[data-name-locale-input]') ||
-                      panel.querySelector('input[id^="productName"]')
-                : null;
         };
 
         form.querySelectorAll('input[id^="slug"]').forEach((input) => {
@@ -160,13 +161,10 @@
 
         if (nameInput) {
             const updateSlug = debounce(() => {
+                syncDefaultLocaleName();
                 const slugInput = getSlugInput();
                 if (!slugInput) return;
                 if (slugTouched && slugInput.value.trim().length > 0) return;
-                const scopedNameInput = getLocaleNameInput();
-                if (scopedNameInput && scopedNameInput !== nameInput) {
-                    scopedNameInput.value = nameInput.value;
-                }
                 slugInput.value = slugify(nameInput.value);
                 slugInput.dispatchEvent(new Event('input', { bubbles: true }));
             });
@@ -186,24 +184,30 @@
             });
         }
 
-        const buttons = form.querySelectorAll('[data-product-tab]');
-        const panels = form.querySelectorAll('[data-locale-panel]');
+        const buttons = Array.from(form.querySelectorAll('[data-product-tab]'));
+        const panels = Array.from(form.querySelectorAll('[data-locale-panel]'));
 
         if (buttons.length && panels.length) {
-            const setActive = (target) => {
+            const activeFallback = 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-50';
+            const inactiveFallback =
+                'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50';
+
+            const getClasses = (button, key, fallback) => {
+                const raw = button.dataset[key] || fallback;
+                return raw.split(' ').filter(Boolean);
+            };
+
+            const setActive = (target, persist = true) => {
                 if (!target) return;
+
                 buttons.forEach((button) => {
                     const code = button.getAttribute('data-product-tab');
                     const isActive = code === target;
-                    button.classList.toggle('bg-white', isActive);
-                    button.classList.toggle('text-zinc-900', isActive);
-                    button.classList.toggle('shadow-sm', isActive);
-                    button.classList.toggle('text-zinc-600', !isActive);
-                    button.classList.toggle('hover:text-zinc-900', !isActive);
-                    button.classList.toggle('dark:bg-zinc-900', isActive);
-                    button.classList.toggle('dark:text-zinc-50', isActive);
-                    button.classList.toggle('dark:text-zinc-400', !isActive);
-                    button.classList.toggle('dark:hover:text-zinc-50', !isActive);
+                    const activeClasses = getClasses(button, 'tabActive', activeFallback);
+                    const inactiveClasses = getClasses(button, 'tabInactive', inactiveFallback);
+
+                    activeClasses.forEach((cls) => button.classList.toggle(cls, isActive));
+                    inactiveClasses.forEach((cls) => button.classList.toggle(cls, !isActive));
                 });
 
                 panels.forEach((panel) => {
@@ -212,17 +216,37 @@
                         panel.getAttribute('data-locale-panel') !== target
                     );
                 });
+
+                if (persist) {
+                    try {
+                        sessionStorage.setItem(storageKey, target);
+                    } catch (error) {
+                        // Ignore storage errors.
+                    }
+                }
             };
 
-            const defaultTab =
-                buttons
-                    .map((button) => button.getAttribute('data-product-tab'))
-                    .find((code) =>
-                        form.querySelector(`[data-locale-panel="${code}"]:not(.hidden)`)
-                    ) || buttons[0]?.getAttribute('data-product-tab');
+            let stored = null;
+            try {
+                stored = sessionStorage.getItem(storageKey);
+            } catch (error) {
+                stored = null;
+            }
+
+            const visibleTab = buttons
+                .map((button) => button.getAttribute('data-product-tab'))
+                .find((code) =>
+                    form.querySelector(`[data-locale-panel="${code}"]:not(.hidden)`)
+                );
+
+            const isStoredValid =
+                stored && buttons.some((button) => button.getAttribute('data-product-tab') === stored);
+            const defaultTab = isStoredValid
+                ? stored
+                : visibleTab || buttons[0]?.getAttribute('data-product-tab');
 
             if (defaultTab) {
-                setActive(defaultTab);
+                setActive(defaultTab, false);
             }
 
             buttons.forEach((button) => {
