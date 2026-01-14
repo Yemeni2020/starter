@@ -18,10 +18,10 @@ class SettingsController extends Controller
 
         if (! $seoSetting->exists) {
             $seoSetting->fill([
-                'title' => config('seo.site_title'),
-                'description' => config('seo.site_description'),
-                'image' => config('seo.default_image'),
-                'locale' => config('seo.locale'),
+                'title' => config('seo.site_title', config('app.name')),
+                'description' => config('seo.site_description', ''),
+                'image' => config('seo.default_image', null),
+                'locale' => config('seo.locale', 'en_US'),
             ]);
         }
 
