@@ -176,9 +176,96 @@
             const defaultLocale = @json($defaultLocale);
             const defaultLocaleSuffix = @json($defaultLocaleSuffix);
 
+            const slugify = (value) =>
+                (value || '')
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            const initMultiDropdowns = (form) => {
+                form.querySelectorAll('[data-multi-dropdown]').forEach((root) => {
+                    if (root.dataset.jsInit === '1') return;
+                    root.dataset.jsInit = '1';
+
+                    const trigger = root.querySelector('[data-dropdown-trigger]');
+                    const panel = root.querySelector('[data-dropdown-panel]');
+                    const placeholder = root.querySelector('[data-dropdown-placeholder]');
+                    const chipsWrap = root.querySelector('[data-dropdown-chips]');
+                    const hiddenWrap = root.querySelector('[data-hidden-inputs]');
+                    const checkboxes = Array.from(root.querySelectorAll('[data-color-checkbox]'));
+                    const clearBtn = root.querySelector('[data-clear]');
+                    const doneBtn = root.querySelector('[data-done]');
+
+                    if (!trigger || !panel || !hiddenWrap) return;
+
+                    const open = () => panel.classList.remove('hidden');
+                    const close = () => panel.classList.add('hidden');
+                    const toggle = () => panel.classList.toggle('hidden');
+
+                    const syncHiddenInputs = (ids) => {
+                        hiddenWrap.innerHTML = '';
+                        ids.forEach((id) => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'color_ids[]';
+                            input.value = id;
+                            hiddenWrap.appendChild(input);
+                        });
+                    };
+
+                    const render = () => {
+                        const selected = checkboxes.filter(cb => cb.checked).map(cb => ({
+                            id: cb.value,
+                            name: cb.dataset.colorName || cb.value
+                        }));
+
+                        if (selected.length === 0) {
+                            placeholder?.classList.remove('hidden');
+                            chipsWrap?.classList.add('hidden');
+                            if (chipsWrap) chipsWrap.innerHTML = '';
+                        } else {
+                            placeholder?.classList.add('hidden');
+                            chipsWrap?.classList.remove('hidden');
+                            if (chipsWrap) {
+                                chipsWrap.innerHTML = selected.map(s =>
+                                    `<span class="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-xs font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">${s.name}</span>`
+                                ).join('');
+                            }
+                        }
+
+                        syncHiddenInputs(selected.map(s => s.id));
+                    };
+
+                    render();
+
+                    trigger.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        toggle();
+                    });
+
+                    doneBtn?.addEventListener('click', close);
+
+                    clearBtn?.addEventListener('click', () => {
+                        checkboxes.forEach(cb => cb.checked = false);
+                        render();
+                    });
+
+                    checkboxes.forEach(cb => cb.addEventListener('change', render));
+
+                    document.addEventListener('click', (e) => {
+                        if (!root.contains(e.target)) close();
+                    });
+                });
+            };
+
             const initProductEdit = () => {
-                const buttons = document.querySelectorAll('[data-product-tab]');
-                const panels = document.querySelectorAll('[data-locale-panel]');
+                const form = document.getElementById('product-edit-form');
+                if (!form || form.dataset.jsInit === '1') return;
+                form.dataset.jsInit = '1';
+
+                const buttons = form.querySelectorAll('[data-product-tab]');
+                const panels = form.querySelectorAll('[data-locale-panel]');
 
                 if (buttons.length && panels.length) {
                     const setActive = (target) => {
@@ -214,47 +301,46 @@
                 const nameInput = document.getElementById(`productName${defaultLocaleSuffix}Input`);
                 const slugInput = document.getElementById(`slug${defaultLocaleSuffix}Input`);
 
-                if (!nameInput || !slugInput) {
-                    return;
+                if (nameInput && slugInput) {
+                    let slugTouched = false;
+                    let slugTimer = null;
+
+                    const debounce = (callback, delay = 300) => {
+                        return (...args) => {
+                            if (slugTimer) {
+                                window.clearTimeout(slugTimer);
+                            }
+                            slugTimer = window.setTimeout(() => callback(...args), delay);
+                        };
+                    };
+
+                    slugInput.addEventListener('input', (event) => {
+                        if (!event.isTrusted) return;
+                        slugTouched = slugInput.value.trim().length > 0;
+                    });
+
+                    const updateSlug = debounce(() => {
+                        if (slugTouched && slugInput.value.trim().length > 0) return;
+                        slugInput.value = slugify(nameInput.value);
+                        slugInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    });
+                    nameInput.addEventListener('input', updateSlug);
                 }
 
-                const slugify = (value) =>
-                    value
-                        .toLowerCase()
-                        .trim()
-                        .replace(/[^a-z0-9]+/g, '-')
-                        .replace(/^-+|-+$/g, '');
+                initMultiDropdowns(form);
 
-                let slugTouched = false;
-                let slugTimer = null;
-
-                const debounce = (callback, delay = 300) => {
-                    return (...args) => {
-                        if (slugTimer) {
-                            window.clearTimeout(slugTimer);
-                        }
-                        slugTimer = window.setTimeout(() => callback(...args), delay);
-                    };
-                };
-
-                slugInput.addEventListener('input', (event) => {
-                    if (!event.isTrusted) return;
-                    slugTouched = slugInput.value.trim().length > 0;
+                form.addEventListener('submit', (e) => {
+                    const hasAny = form.querySelectorAll('input[name="color_ids[]"]').length > 0;
+                    if (!hasAny) {
+                        e.preventDefault();
+                        alert('Please select at least one color.');
+                    }
                 });
-
-                const updateSlug = debounce(() => {
-                    if (slugTouched && slugInput.value.trim().length > 0) return;
-                    slugInput.value = slugify(nameInput.value);
-                    slugInput.dispatchEvent(new Event('input', { bubbles: true }));
-                });
-                nameInput.addEventListener('input', updateSlug);
             };
 
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initProductEdit);
-            } else {
-                initProductEdit();
-            }
+            document.addEventListener('DOMContentLoaded', initProductEdit);
+            document.addEventListener('livewire:navigated', initProductEdit);
         })();
     </script>
 @endpush
+

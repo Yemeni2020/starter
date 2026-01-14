@@ -269,18 +269,98 @@
             const defaultLocale = @json($defaultLocale);
             const defaultLocaleSuffix = @json($defaultLocaleSuffix);
 
+            const slugify = (value) =>
+                (value || '')
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            const initMultiDropdowns = (form) => {
+                form.querySelectorAll('[data-multi-dropdown]').forEach((root) => {
+                    if (root.dataset.jsInit === '1') return;
+                    root.dataset.jsInit = '1';
+
+                    const trigger = root.querySelector('[data-dropdown-trigger]');
+                    const panel = root.querySelector('[data-dropdown-panel]');
+                    const placeholder = root.querySelector('[data-dropdown-placeholder]');
+                    const chipsWrap = root.querySelector('[data-dropdown-chips]');
+                    const hiddenWrap = root.querySelector('[data-hidden-inputs]');
+                    const checkboxes = Array.from(root.querySelectorAll('[data-color-checkbox]'));
+                    const clearBtn = root.querySelector('[data-clear]');
+                    const doneBtn = root.querySelector('[data-done]');
+
+                    if (!trigger || !panel || !hiddenWrap) return;
+
+                    const open = () => panel.classList.remove('hidden');
+                    const close = () => panel.classList.add('hidden');
+                    const toggle = () => panel.classList.toggle('hidden');
+
+                    const syncHiddenInputs = (ids) => {
+                        hiddenWrap.innerHTML = '';
+                        ids.forEach((id) => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'color_ids[]';
+                            input.value = id;
+                            hiddenWrap.appendChild(input);
+                        });
+                    };
+
+                    const render = () => {
+                        const selected = checkboxes.filter(cb => cb.checked).map(cb => ({
+                            id: cb.value,
+                            name: cb.dataset.colorName || cb.value
+                        }));
+
+                        if (selected.length === 0) {
+                            placeholder?.classList.remove('hidden');
+                            chipsWrap?.classList.add('hidden');
+                            if (chipsWrap) chipsWrap.innerHTML = '';
+                        } else {
+                            placeholder?.classList.add('hidden');
+                            chipsWrap?.classList.remove('hidden');
+                            if (chipsWrap) {
+                                chipsWrap.innerHTML = selected.map(s =>
+                                    `<span class="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-xs font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">${s.name}</span>`
+                                ).join('');
+                            }
+                        }
+
+                        syncHiddenInputs(selected.map(s => s.id));
+                    };
+
+                    render();
+
+                    trigger.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        toggle();
+                    });
+
+                    doneBtn?.addEventListener('click', close);
+
+                    clearBtn?.addEventListener('click', () => {
+                        checkboxes.forEach(cb => cb.checked = false);
+                        render();
+                    });
+
+                    checkboxes.forEach(cb => cb.addEventListener('change', render));
+
+                    document.addEventListener('click', (e) => {
+                        if (!root.contains(e.target)) close();
+                    });
+                });
+            };
+
             const initProductCreate = () => {
+                const form = document.getElementById('product-create-form');
+                if (!form || form.dataset.jsInit === '1') return;
+                form.dataset.jsInit = '1';
+
                 const generateSkuButton = document.getElementById('generateSkuButton');
                 const skuInput = document.getElementById('skuInput');
                 const nameInput = document.getElementById(`productName${defaultLocaleSuffix}Input`);
                 const slugInput = document.getElementById(`slug${defaultLocaleSuffix}Input`);
-
-                const slugify = (value) =>
-                    (value || '')
-                    .toLowerCase()
-                    .trim()
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-+|-+$/g, '');
 
                 let slugTouched = false;
                 let slugTimer = null;
@@ -319,136 +399,52 @@
 
                     generateSkuButton.addEventListener('click', () => {
                         skuInput.value = generateSku();
-                        skuInput.dispatchEvent(new Event('input', {
-                            bubbles: true
-                        }));
+                        skuInput.dispatchEvent(new Event('input', { bubbles: true }));
                     });
                 }
 
-                const buttons = document.querySelectorAll('[data-product-tab]');
-                const panels = document.querySelectorAll('[data-locale-panel]');
+                const buttons = form.querySelectorAll('[data-product-tab]');
+                const panels = form.querySelectorAll('[data-locale-panel]');
 
-                if (!buttons.length || !panels.length) return;
+                if (buttons.length && panels.length) {
+                    const setActive = (target) => {
+                        if (!target) return;
 
-                const setActive = (target) => {
-                    if (!target) return;
+                        buttons.forEach((button) => {
+                            const code = button.getAttribute('data-product-tab');
+                            const isActive = code === target;
 
-                    buttons.forEach((button) => {
-                        const code = button.getAttribute('data-product-tab');
-                        const isActive = code === target;
+                            button.classList.toggle('bg-white', isActive);
+                            button.classList.toggle('text-zinc-900', isActive);
+                            button.classList.toggle('shadow-sm', isActive);
+                            button.classList.toggle('text-zinc-600', !isActive);
+                            button.classList.toggle('hover:text-zinc-900', !isActive);
+                            button.classList.toggle('dark:bg-zinc-900', isActive);
+                            button.classList.toggle('dark:text-zinc-50', isActive);
+                            button.classList.toggle('dark:text-zinc-400', !isActive);
+                            button.classList.toggle('dark:hover:text-zinc-50', !isActive);
+                        });
 
-                        button.classList.toggle('bg-white', isActive);
-                        button.classList.toggle('text-zinc-900', isActive);
-                        button.classList.toggle('shadow-sm', isActive);
-                        button.classList.toggle('text-zinc-600', !isActive);
-                        button.classList.toggle('hover:text-zinc-900', !isActive);
-                        button.classList.toggle('dark:bg-zinc-900', isActive);
-                        button.classList.toggle('dark:text-zinc-50', isActive);
-                        button.classList.toggle('dark:text-zinc-400', !isActive);
-                        button.classList.toggle('dark:hover:text-zinc-50', !isActive);
-                    });
+                        panels.forEach((panel) => {
+                            panel.classList.toggle('hidden', panel.getAttribute('data-locale-panel') !== target);
+                        });
+                    };
 
-                    panels.forEach((panel) => {
-                        panel.classList.toggle('hidden', panel.getAttribute('data-locale-panel') !==
-                            target);
-                    });
-                };
-
-                const hasTab = (value) => Array.from(buttons).some((button) => button.getAttribute(
-                    'data-product-tab') === value);
-                const defaultTab = hasTab(defaultLocale) ? defaultLocale : buttons[0]?.getAttribute(
-                    'data-product-tab');
-                if (defaultTab) {
-                    setActive(defaultTab);
-                }
-
-                buttons.forEach((button) => {
-                    button.addEventListener('click', () => {
-                        setActive(button.getAttribute('data-product-tab'));
-                    });
-                });
-            };
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initProductCreate);
-            } else {
-                initProductCreate();
-            }
-        })();
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('[data-multi-dropdown]').forEach((root) => {
-                const trigger = root.querySelector('[data-dropdown-trigger]');
-                const panel = root.querySelector('[data-dropdown-panel]');
-                const placeholder = root.querySelector('[data-dropdown-placeholder]');
-                const chipsWrap = root.querySelector('[data-dropdown-chips]');
-                const hiddenWrap = root.querySelector('[data-hidden-inputs]');
-                const checkboxes = Array.from(root.querySelectorAll('[data-color-checkbox]'));
-                const clearBtn = root.querySelector('[data-clear]');
-                const doneBtn = root.querySelector('[data-done]');
-
-                const open = () => panel.classList.remove('hidden');
-                const close = () => panel.classList.add('hidden');
-                const toggle = () => panel.classList.toggle('hidden');
-
-                const syncHiddenInputs = (ids) => {
-                    hiddenWrap.innerHTML = '';
-                    ids.forEach((id) => {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = 'color_ids[]';
-                        input.value = id;
-                        hiddenWrap.appendChild(input);
-                    });
-                };
-
-                const render = () => {
-                    const selected = checkboxes.filter(cb => cb.checked).map(cb => ({
-                        id: cb.value,
-                        name: cb.dataset.colorName || cb.value
-                    }));
-
-                    if (selected.length === 0) {
-                        placeholder.classList.remove('hidden');
-                        chipsWrap.classList.add('hidden');
-                        chipsWrap.innerHTML = '';
-                    } else {
-                        placeholder.classList.add('hidden');
-                        chipsWrap.classList.remove('hidden');
-                        chipsWrap.innerHTML = selected.map(s =>
-                            `<span class="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-xs font-semibold text-zinc-700
-                 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">${s.name}</span>`
-                        ).join('');
+                    const hasTab = (value) => Array.from(buttons).some((button) => button.getAttribute('data-product-tab') === value);
+                    const defaultTab = hasTab(defaultLocale) ? defaultLocale : buttons[0]?.getAttribute('data-product-tab');
+                    if (defaultTab) {
+                        setActive(defaultTab);
                     }
 
-                    syncHiddenInputs(selected.map(s => s.id));
-                };
+                    buttons.forEach((button) => {
+                        button.addEventListener('click', () => {
+                            setActive(button.getAttribute('data-product-tab'));
+                        });
+                    });
+                }
 
-                // initial render (supports old() selections)
-                render();
+                initMultiDropdowns(form);
 
-                trigger.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    toggle();
-                });
-
-                doneBtn?.addEventListener('click', close);
-
-                clearBtn?.addEventListener('click', () => {
-                    checkboxes.forEach(cb => cb.checked = false);
-                    render();
-                });
-
-                checkboxes.forEach(cb => cb.addEventListener('change', render));
-
-                // click outside closes
-                document.addEventListener('click', (e) => {
-                    if (!root.contains(e.target)) close();
-                });
-            });
-
-            // REQUIRED validation on submit
-            const form = document.getElementById('product-create-form');
-            if (form) {
                 form.addEventListener('submit', (e) => {
                     const hasAny = form.querySelectorAll('input[name="color_ids[]"]').length > 0;
                     if (!hasAny) {
@@ -456,7 +452,11 @@
                         alert('Please select at least one color.');
                     }
                 });
-            }
-        });
+            };
+
+            document.addEventListener('DOMContentLoaded', initProductCreate);
+            document.addEventListener('livewire:navigated', initProductCreate);
+        })();
     </script>
 @endpush
+
