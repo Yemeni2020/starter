@@ -233,8 +233,13 @@
             </div>
 
             <div class="tab-panel rounded-xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-700 dark:bg-zinc-900" data-tab="translations">
-                <flux:heading size="lg" level="2">{{ __('Translations') }}</flux:heading>
-                <flux:text>{{ __('Manage custom translation keys and overrides in the translation manager.') }}</flux:text>
+                <flux:heading size="lg" level="2">{{ __('admin.translations.title') }}</flux:heading>
+                <flux:text>{{ __('admin.translations.manage_help') }}</flux:text>
+                <div class="mt-4">
+                    <flux:button variant="outline" :href="route('admin.translations.index')" wire:navigate>
+                        {{ __('admin.translations.manager_link') }}
+                    </flux:button>
+                </div>
             </div>
 
             <div class="tab-panel rounded-xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-700 dark:bg-zinc-900" data-tab="reports">

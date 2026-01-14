@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Translations\TranslationRepository;
+use App\Translations\DatabaseTranslationLoader;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Date;
@@ -17,7 +19,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->extend('translation.loader', function ($loader, $app) {
+            return new DatabaseTranslationLoader(
+                $app['files'],
+                $app['path.lang'],
+                [$app['path.lang'].'/vendor'],
+                $app->make(TranslationRepository::class)
+            );
+        });
     }
 
     /**

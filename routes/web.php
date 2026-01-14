@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\PaymentSettingsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\TranslationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -63,6 +64,13 @@ Route::middleware(['auth', 'verified', 'admin'])
         Route::post('settings/general', [SettingsController::class, 'updateGeneral'])->name('settings.general');
         Route::post('settings/seo', [SettingsController::class, 'updateSeo'])->name('settings.seo');
         Route::post('settings/payments/{provider}', [PaymentSettingsController::class, 'update'])->name('settings.payments');
+
+        Route::get('translations', [TranslationController::class, 'index'])->name('translations.index');
+        Route::post('translations', [TranslationController::class, 'store'])->name('translations.store');
+        Route::put('translations', [TranslationController::class, 'update'])->name('translations.update');
+        Route::get('translations/export', [TranslationController::class, 'export'])->name('translations.export');
+        Route::post('translations/import', [TranslationController::class, 'import'])->name('translations.import');
+        Route::post('translations/clear-cache', [TranslationController::class, 'clearCache'])->name('translations.clear-cache');
     });
 
 Route::middleware(['auth', 'verified'])

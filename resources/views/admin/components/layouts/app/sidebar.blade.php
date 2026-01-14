@@ -35,6 +35,9 @@
                         <flux:sidebar.item icon="cog" :href="route('admin.settings.index')" :current="request()->routeIs('admin.settings.*')" wire:navigate>
                             {{ __('Settings') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="globe" :href="route('admin.translations.index')" :current="request()->routeIs('admin.translations.*')" wire:navigate>
+                            {{ __('Translations') }}
+                        </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif
             </flux:sidebar.nav>
