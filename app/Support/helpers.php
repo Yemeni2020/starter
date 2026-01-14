@@ -44,3 +44,13 @@ function locale_dropdown_items(): array
         ->all();
 }
 }
+
+if (! function_exists('setting')) {
+    /**
+     * Resolve a stored setting value.
+     */
+    function setting(string $key, mixed $default = null, ?string $group = null): mixed
+    {
+        return app(\App\Services\Settings\SettingsManager::class)->get($key, $default, $group);
+    }
+}

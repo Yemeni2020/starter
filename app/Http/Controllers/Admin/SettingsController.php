@@ -5,14 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SecuritySettingRequest;
 use App\Http\Requests\Admin\SeoSettingRequest;
+use App\Http\Requests\Admin\UpdateGeneralSettingsRequest;
 use App\Models\SecuritySetting;
 use App\Models\SeoSetting;
+use App\Services\Settings\SettingsManager;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
-    public function index(): View
+    public function index(SettingsManager $settings): View
     {
         $seoSetting = SeoSetting::firstOrNew(['slug' => 'global']);
 
@@ -27,10 +30,43 @@ class SettingsController extends Controller
 
         $securitySetting = SecuritySetting::firstOrNew(['slug' => 'global']);
 
+        $generalSettings = array_merge([
+            'site_name' => config('app.name'),
+            'site_url' => config('app.url'),
+            'support_email' => config('mail.from.address'),
+            'default_currency' => config('store.currency', 'USD'),
+            'default_locale' => config('app.locale', 'en'),
+            'timezone' => config('app.timezone', 'UTC'),
+            'logo_path' => null,
+        ], $settings->group('general'));
+
         return view('admin.settings.index', [
             'seoSetting' => $seoSetting,
             'securitySetting' => $securitySetting,
+            'generalSettings' => $generalSettings,
         ]);
+    }
+
+    public function updateGeneral(UpdateGeneralSettingsRequest $request, SettingsManager $settings): RedirectResponse
+    {
+        $data = $request->validated();
+
+        $payload = [
+            'site_name' => $data['site_name'],
+            'site_url' => $data['site_url'],
+            'support_email' => $data['support_email'] ?? null,
+            'default_currency' => strtoupper($data['default_currency']),
+            'default_locale' => $data['default_locale'],
+            'timezone' => $data['timezone'],
+        ];
+
+        if ($request->hasFile('logo')) {
+            $payload['logo_path'] = Storage::disk('public')->putFile('settings', $request->file('logo'));
+        }
+
+        $settings->setGroup('general', $payload);
+
+        return back()->with('status', __('General settings saved.'));
     }
 
     public function updateSeo(SeoSettingRequest $request): RedirectResponse
@@ -53,7 +89,8 @@ class SettingsController extends Controller
             ]
         );
 
-        return back()->with('status', 'SEO settings saved.');
+        return back()->with('status', __('SEO settings saved.'));
+
     }
 
     public function updateSecurity(SecuritySettingRequest $request): RedirectResponse
@@ -85,6 +122,7 @@ class SettingsController extends Controller
             ]
         );
 
-        return back()->with('status', 'Security settings saved.');
+        return back()->with('status', __('Security settings saved.'));
+
     }
 }

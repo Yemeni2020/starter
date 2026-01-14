@@ -55,6 +55,7 @@ Route::middleware(['auth', 'verified', 'admin'])
         Route::view('orders', 'admin.orders.index')->name('orders.index');
 
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::post('settings/general', [SettingsController::class, 'updateGeneral'])->name('settings.general');
         Route::post('settings/seo', [SettingsController::class, 'updateSeo'])->name('settings.seo');
     });
 
