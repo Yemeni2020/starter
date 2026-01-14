@@ -41,6 +41,8 @@
                 </flux:tooltip>
             </flux:navbar>
 
+            @include('admin.partials.lang-switcher')
+
             <x-desktop-user-menu />
         </flux:header>
 

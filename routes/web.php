@@ -9,6 +9,18 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
+Route::post('lang/{locale}', function (string $locale) {
+    $supported = config('app.supported_locales', ['en', 'ar']);
+
+    if (! in_array($locale, $supported, true)) {
+        $locale = config('app.locale');
+    }
+
+    session(['locale' => $locale]);
+
+    return redirect()->back()->withCookie(cookie('locale', $locale, 60 * 24 * 365));
+})->name('lang.switch');
+
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
