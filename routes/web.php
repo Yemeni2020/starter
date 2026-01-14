@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ColorController;
 use App\Http\Controllers\Admin\PaymentSettingsController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\SettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +55,9 @@ Route::middleware(['auth', 'verified', 'admin'])
         Route::view('categories/{category}/edit', 'admin.categories.edit')->name('categories.edit');
 
         Route::view('orders', 'admin.orders.index')->name('orders.index');
+
+        Route::get('reports', [ReportsController::class, 'index'])->name('reports.index');
+        Route::get('reports/export/{type}/{format}', [ReportsController::class, 'export'])->name('reports.export');
 
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('settings/general', [SettingsController::class, 'updateGeneral'])->name('settings.general');
