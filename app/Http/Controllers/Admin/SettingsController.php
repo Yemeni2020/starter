@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SecuritySettingRequest;
 use App\Http\Requests\Admin\SeoSettingRequest;
 use App\Http\Requests\Admin\UpdateGeneralSettingsRequest;
+use App\Models\PaymentGatewaySetting;
 use App\Models\SecuritySetting;
 use App\Models\SeoSetting;
 use App\Services\Settings\SettingsManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -40,10 +43,38 @@ class SettingsController extends Controller
             'logo_path' => null,
         ], $settings->group('general'));
 
+        $providerKeys = array_keys(config('payments.providers', []));
+        if (! in_array('applepay', $providerKeys, true)) {
+            $providerKeys[] = 'applepay';
+        }
+
+        $paymentSettings = collect();
+        if (Schema::hasTable('payment_gateway_settings')) {
+            $paymentSettings = PaymentGatewaySetting::query()
+                ->whereIn('provider', $providerKeys)
+                ->get()
+                ->keyBy('provider');
+        }
+
+        $paymentGateways = collect($providerKeys)->map(function (string $provider) use ($paymentSettings) {
+            $setting = $paymentSettings->get($provider);
+
+            return [
+                'provider' => $provider,
+                'display_name' => $setting?->display_name ?? Str::title(str_replace('_', ' ', $provider)),
+                'enabled' => $setting?->enabled ?? (bool) config("payments.providers.{$provider}.enabled", false),
+                'sandbox' => $setting?->sandbox ?? true,
+                'sort_order' => $setting?->sort_order ?? 0,
+                'credentials' => $setting?->credentials ?? [],
+                'webhook_secret' => $setting?->webhook_secret ?? null,
+            ];
+        })->values()->all();
+
         return view('admin.settings.index', [
             'seoSetting' => $seoSetting,
             'securitySetting' => $securitySetting,
             'generalSettings' => $generalSettings,
+            'paymentGateways' => $paymentGateways,
         ]);
     }
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ColorController;
+use App\Http\Controllers\Admin\PaymentSettingsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\SettingsController;
 use Illuminate\Support\Facades\Route;
@@ -57,6 +58,7 @@ Route::middleware(['auth', 'verified', 'admin'])
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('settings/general', [SettingsController::class, 'updateGeneral'])->name('settings.general');
         Route::post('settings/seo', [SettingsController::class, 'updateSeo'])->name('settings.seo');
+        Route::post('settings/payments/{provider}', [PaymentSettingsController::class, 'update'])->name('settings.payments');
     });
 
 Route::middleware(['auth', 'verified'])

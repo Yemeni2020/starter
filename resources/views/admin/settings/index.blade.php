@@ -167,8 +167,69 @@
             </div>
 
             <div class="tab-panel rounded-xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-700 dark:bg-zinc-900" data-tab="payments">
-                <flux:heading size="lg" level="2">{{ __('Payment gateways') }}</flux:heading>
-                <flux:text>{{ __('Manage gateway availability and credentials in the payments manager.') }}</flux:text>
+                @php
+                    $credentialFields = [
+                        'mada' => ['merchant_id', 'secret'],
+                        'stcpay' => ['merchant_id', 'secret'],
+                        'applepay' => ['merchant_id', 'key_id', 'private_key'],
+                        'mock' => [],
+                    ];
+                @endphp
+
+                <div class="space-y-4">
+                    <flux:heading size="lg" level="2">{{ __('Payment gateways') }}</flux:heading>
+                    <flux:text>{{ __('Enable providers, manage credentials, and set display order.') }}</flux:text>
+
+                    <div class="grid gap-4">
+                        @foreach ($paymentGateways as $gateway)
+                            @php
+                                $fields = $credentialFields[$gateway['provider']] ?? [];
+                            @endphp
+                            <form method="POST" action="{{ route('admin.settings.payments', $gateway['provider']) }}" class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+                                @csrf
+
+                                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                    <div>
+                                        <div class="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{{ $gateway['display_name'] }}</div>
+                                        <div class="text-xs text-zinc-500">{{ strtoupper($gateway['provider']) }}</div>
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <label class="flex items-center gap-2 text-xs font-semibold text-zinc-600">
+                                            <input type="checkbox" name="enabled" value="1" @checked(old('enabled', $gateway['enabled']))>
+                                            {{ __('Enabled') }}
+                                        </label>
+                                        <label class="flex items-center gap-2 text-xs font-semibold text-zinc-600">
+                                            <input type="checkbox" name="sandbox" value="1" @checked(old('sandbox', $gateway['sandbox']))>
+                                            {{ __('Sandbox') }}
+                                        </label>
+                                        <flux:input name="sort_order" label="{{ __('Sort order') }}" type="number" value="{{ old('sort_order', $gateway['sort_order']) }}" />
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                                    <flux:input name="display_name" label="{{ __('Display name') }}" value="{{ old('display_name', $gateway['display_name']) }}" />
+                                    <flux:input name="webhook_secret" label="{{ __('Webhook secret') }}" value="{{ old('webhook_secret', $gateway['webhook_secret']) }}" />
+                                </div>
+
+                                @if (! empty($fields))
+                                    <div class="mt-4 grid gap-4 md:grid-cols-2">
+                                        @foreach ($fields as $field)
+                                            <flux:input
+                                                name="credentials[{{ $field }}]"
+                                                label="{{ __(str_replace('_', ' ', \Illuminate\Support\Str::title($field))) }}"
+                                                value="{{ old('credentials.' . $field, $gateway['credentials'][$field] ?? '') }}"
+                                            />
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                <div class="mt-4">
+                                    <flux:button type="submit" variant="outline">{{ __('Save gateway') }}</flux:button>
+                                </div>
+                            </form>
+                        @endforeach
+                    </div>
+                </div>
             </div>
 
             <div class="tab-panel rounded-xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-700 dark:bg-zinc-900" data-tab="translations">
