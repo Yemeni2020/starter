@@ -78,6 +78,11 @@
                             @endforeach
                         </div>
                         <div class="space-y-4 mt-4">
+                            <flux:input id="productNameInput" name="name" label="Product name"
+                                placeholder="Lumina Desk Lamp"
+                                value="{{ old('name', $translationValue('name', $defaultLocale)) }}"
+                                data-name-input />
+
                             @foreach ($locales as $code => $label)
                                 <div
                                     class="locale-panel rounded-2xl border border-zinc-200 bg-slate-50 p-4 {{ $code === $defaultLocale ? '' : 'hidden' }}"
@@ -93,7 +98,7 @@
                                         label="Product name"
                                         placeholder="Lumina Desk Lamp"
                                         value="{{ $translationValue('name', $code) }}"
-                                        @if($code === $defaultLocale) required @endif
+                                        @if($code === $defaultLocale) required data-name-locale-input @endif
                                     />
                                     <flux:input
                                         id="slug{{ ucfirst($code) }}Input"
@@ -360,7 +365,10 @@
                     });
                 }
 
-                const nameInput = document.getElementById(`productName${defaultLocaleSuffix}Input`);
+                const nameInput = document.querySelector('[data-name-input]') ||
+                    document.getElementById(`productName${defaultLocaleSuffix}Input`);
+                const localeNameInput = document.querySelector('[data-name-locale-input]') ||
+                    document.getElementById(`productName${defaultLocaleSuffix}Input`);
                 const slugInput = document.getElementById(`slug${defaultLocaleSuffix}Input`);
 
                 if (nameInput && slugInput) {
@@ -383,6 +391,9 @@
 
                     const updateSlug = debounce(() => {
                         if (slugTouched && slugInput.value.trim().length > 0) return;
+                        if (localeNameInput && localeNameInput !== nameInput) {
+                            localeNameInput.value = nameInput.value;
+                        }
                         slugInput.value = slugify(nameInput.value);
                         slugInput.dispatchEvent(new Event('input', { bubbles: true }));
                     });
