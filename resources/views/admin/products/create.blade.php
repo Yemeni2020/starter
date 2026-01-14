@@ -142,6 +142,15 @@
                                 </div>
                             @endforeach
 
+                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+                                <div class="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{{ __('SEO overrides') }}</div>
+                                <div class="mt-3 grid gap-4">
+                                    <flux:input name="meta_title" label="{{ __('Meta title') }}" value="{{ old('meta_title') }}" />
+                                    <flux:textarea name="meta_description" label="{{ __('Meta description') }}" rows="3">{{ old('meta_description') }}</flux:textarea>
+                                    <flux:input name="canonical_url" label="{{ __('Canonical URL') }}" type="url" value="{{ old('canonical_url') }}" />
+                                </div>
+                            </div>
+
                             <div class="grid gap-4 md:grid-cols-2">
                                 <flux:select name="category_id" label="Category" required>
                                     <flux:select.option value="">Select category</flux:select.option>

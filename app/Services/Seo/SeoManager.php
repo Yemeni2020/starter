@@ -2,8 +2,10 @@
 
 namespace App\Services\Seo;
 
+use App\Models\Product;
 use App\Models\SeoSetting;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class SeoManager
@@ -13,6 +15,8 @@ class SeoManager
 
     public function __construct(protected array $defaults = [])
     {
+        $defaults = $this->resolveDefaults($defaults);
+
         $this->meta = array_merge([
             'title' => $defaults['site_title'] ?? config('app.name'),
             'description' => $defaults['site_description'] ?? '',
@@ -21,6 +25,28 @@ class SeoManager
             'image' => $defaults['default_image'] ?? null,
             'type' => 'website',
         ], $this->meta);
+
+        if (! empty($defaults['global_setting'])) {
+            $this->applySeoSetting($defaults['global_setting']);
+        }
+    }
+
+    protected function resolveDefaults(array $defaults): array
+    {
+        $setting = null;
+
+        if (Schema::hasTable('seo_settings')) {
+            $setting = SeoSetting::where('slug', 'global')->first();
+        }
+
+        return [
+            'site_title' => $setting?->title ?? $defaults['site_title'] ?? config('seo.site_title', config('app.name')),
+            'site_description' => $setting?->description ?? $defaults['site_description'] ?? config('seo.site_description', ''),
+            'site_url' => $defaults['site_url'] ?? config('app.url'),
+            'locale' => $setting?->locale ?? $defaults['locale'] ?? config('seo.locale', 'en_US'),
+            'default_image' => $setting?->image ?? $defaults['default_image'] ?? config('seo.default_image'),
+            'global_setting' => $setting,
+        ];
     }
 
     public function setTitle(string $title): static
@@ -75,6 +101,23 @@ class SeoManager
     public function addJsonLd(array $payload): static
     {
         $this->jsonLd[] = $payload;
+
+        return $this;
+    }
+
+    public function applyProduct(Product $product): static
+    {
+        if ($product->meta_title) {
+            $this->setTitle($product->meta_title);
+        }
+
+        if ($product->meta_description) {
+            $this->setDescription($product->meta_description);
+        }
+
+        if ($product->canonical_url) {
+            $this->setCanonical($product->canonical_url);
+        }
 
         return $this;
     }

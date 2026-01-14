@@ -34,13 +34,13 @@ class SeoServiceProvider extends ServiceProvider
             ? SeoSetting::forRoute($routeName)->first()
             : null;
 
-        if (! $seoSetting) {
-            $seoSetting = SeoSetting::where('slug', 'global')->first();
+        if ($seoSetting) {
+            $seo->applySeoSetting($seoSetting);
         }
 
-        $seo->applySeoSetting($seoSetting);
+        $fallbackSetting = SeoSetting::where('slug', 'global')->first();
 
         view()->share('seo', $seo);
-        view()->share('seoSetting', $seoSetting);
+        view()->share('seoSetting', $seoSetting ?? $fallbackSetting);
     }
 }

@@ -48,6 +48,9 @@ class Product extends Model
         'seo_title_translations',
         'seo_description_translations',
         'seo_keywords_translations',
+        'meta_title',
+        'meta_description',
+        'canonical_url',
     ];
 
     protected $casts = [

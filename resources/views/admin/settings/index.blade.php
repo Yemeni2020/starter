@@ -150,6 +150,19 @@
                             >{{ old('json_ld', $seoSetting->json_ld ? json_encode($seoSetting->json_ld, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : '') }}</flux:textarea>
                         </div>
                     </div>
+
+                    @php
+                        $previewTitle = old('title', $seoSetting->title ?? setting('site_name', config('app.name'), 'general'));
+                        $previewDescription = old('description', $seoSetting->description ?? '');
+                        $previewUrl = old('canonical_url', setting('site_url', config('app.url'), 'general'));
+                    @endphp
+
+                    <div class="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-800/60">
+                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">{{ __('Preview') }}</div>
+                        <div class="mt-2 text-base font-semibold text-blue-600">{{ $previewTitle }}</div>
+                        <div class="text-xs text-emerald-700">{{ $previewUrl }}</div>
+                        <div class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{{ $previewDescription }}</div>
+                    </div>
                 </form>
             </div>
 
