@@ -16,7 +16,7 @@ class SeoManager
         $this->meta = array_merge([
             'title' => $defaults['site_title'] ?? config('app.name'),
             'description' => $defaults['site_description'] ?? '',
-            'canonical' => $defaults['site_url'],
+            'canonical' => $defaults['site_url'] ?? config('app.url'),
             'locale' => $defaults['locale'] ?? 'en_US',
             'image' => $defaults['default_image'] ?? null,
             'type' => 'website',

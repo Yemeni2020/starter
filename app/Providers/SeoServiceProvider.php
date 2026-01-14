@@ -14,7 +14,7 @@ class SeoServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SeoManager::class, function () {
-            return new SeoManager(config('seo'));
+            return new SeoManager(config('seo', []));
         });
     }
 
