@@ -184,7 +184,9 @@
                         </div>
 
                         <div class="p-5 space-y-4">
-                            <flux:input type="file" name="images[]" label="Product images" multiple />
+                            <flux:input type="file" name="images[]" label="Product images" multiple data-image-input />
+
+                            <div class="hidden grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-image-preview></div>
 
                             <div
                                 class="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center dark:border-zinc-700 dark:bg-zinc-950">
@@ -306,8 +308,43 @@
                             hiddenWrap.appendChild(input);
                         });
                     };
+            const initImagePreview = (form) => {
+                const input = form.querySelector('[data-image-input]');
+                const preview = form.querySelector('[data-image-preview]');
+                if (!input || !preview) return;
 
-                    const render = () => {
+                const render = () => {
+                    preview.innerHTML = '';
+                    const files = Array.from(input.files || []);
+                    if (files.length === 0) {
+                        preview.classList.add('hidden');
+                        return;
+                    }
+                    preview.classList.remove('hidden');
+                    files.forEach((file) => {
+                        const url = URL.createObjectURL(file);
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60';
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.alt = 'Selected product image';
+                        img.className = 'h-32 w-full object-cover';
+                        img.onload = () => URL.revokeObjectURL(url);
+                        wrapper.appendChild(img);
+                        preview.appendChild(wrapper);
+                    });
+                };
+
+                input.addEventListener('change', render);
+                render();
+            };
+
+
+                input.addEventListener('change', render);
+                render();
+            };
+
+                                const render = () => {
                         const selected = checkboxes.filter(cb => cb.checked).map(cb => ({
                             id: cb.value,
                             name: cb.dataset.colorName || cb.value
@@ -444,6 +481,8 @@
                 }
 
                 initMultiDropdowns(form);
+
+                initImagePreview(form);
 
                 form.addEventListener('submit', (e) => {
                     const hasAny = form.querySelectorAll('input[name="color_ids[]"]').length > 0;

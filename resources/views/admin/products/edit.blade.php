@@ -28,6 +28,21 @@
                 $selectedColorIds = [$selectedColorIds];
             }
             $selectedColorIds = array_map('intval', array_filter($selectedColorIds));
+
+            $existingImages = $product->images;
+            if (is_string($existingImages)) {
+                $existingImages = json_decode($existingImages, true);
+            }
+            if (!is_array($existingImages)) {
+                $existingImages = [];
+            }
+            if (!$existingImages && !empty($product->gallery)) {
+                $existingImages = is_array($product->gallery) ? $product->gallery : json_decode($product->gallery, true);
+            }
+            if (!$existingImages && !empty($product->image)) {
+                $existingImages = [$product->image];
+            }
+            $existingImages = array_values(array_filter((array) $existingImages));
         @endphp
 
         <form id="product-edit-form" class="grid gap-6 lg:grid-cols-[2fr_1fr]" method="POST" action="{{ route('admin.products.update', $product) }}" enctype="multipart/form-data">
@@ -122,6 +137,18 @@
                     <div class="flex flex-col gap-4">
                         <flux:heading size="lg" level="2">Media</flux:heading>
 
+                        @if ($existingImages)
+                            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                @foreach ($existingImages as $image)
+                                    <div class="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
+                                        <img src="{{ $image }}" alt="Existing product image" class="h-32 w-full object-cover">
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <div class="hidden grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-image-preview></div>
+
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/60">
                                 <x-placeholder-pattern class="absolute inset-0 size-full stroke-zinc-400/30 dark:stroke-white/10" />
@@ -133,7 +160,7 @@
                             </div>
                         </div>
 
-                        <flux:input type="file" name="images[]" label="Replace images" multiple />
+                        <flux:input type="file" name="images[]" label="Replace images" multiple data-image-input />
                     </div>
                 </div>
             </div>
@@ -213,8 +240,43 @@
                             hiddenWrap.appendChild(input);
                         });
                     };
+            const initImagePreview = (form) => {
+                const input = form.querySelector('[data-image-input]');
+                const preview = form.querySelector('[data-image-preview]');
+                if (!input || !preview) return;
 
-                    const render = () => {
+                const render = () => {
+                    preview.innerHTML = '';
+                    const files = Array.from(input.files || []);
+                    if (files.length === 0) {
+                        preview.classList.add('hidden');
+                        return;
+                    }
+                    preview.classList.remove('hidden');
+                    files.forEach((file) => {
+                        const url = URL.createObjectURL(file);
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60';
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.alt = 'Selected product image';
+                        img.className = 'h-32 w-full object-cover';
+                        img.onload = () => URL.revokeObjectURL(url);
+                        wrapper.appendChild(img);
+                        preview.appendChild(wrapper);
+                    });
+                };
+
+                input.addEventListener('change', render);
+                render();
+            };
+
+
+                input.addEventListener('change', render);
+                render();
+            };
+
+                                const render = () => {
                         const selected = checkboxes.filter(cb => cb.checked).map(cb => ({
                             id: cb.value,
                             name: cb.dataset.colorName || cb.value
@@ -328,6 +390,8 @@
                 }
 
                 initMultiDropdowns(form);
+
+                initImagePreview(form);
 
                 form.addEventListener('submit', (e) => {
                     const hasAny = form.querySelectorAll('input[name="color_ids[]"]').length > 0;
