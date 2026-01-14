@@ -363,26 +363,32 @@
                     .replace(/[^a-z0-9]+/g, '-')
                     .replace(/^-+|-+$/g, '');
 
-                let slugManuallyEdited = false;
+                let slugTouched = false;
+                let slugTimer = null;
+
+                const debounce = (callback, delay = 300) => {
+                    return (...args) => {
+                        if (slugTimer) {
+                            window.clearTimeout(slugTimer);
+                        }
+                        slugTimer = window.setTimeout(() => callback(...args), delay);
+                    };
+                };
 
                 if (slugInput) {
                     slugInput.addEventListener('input', (event) => {
                         if (!event.isTrusted) return;
-                        slugManuallyEdited = slugInput.value.trim().length > 0;
-                        if (slugInput.value.trim().length === 0) {
-                            slugManuallyEdited = false;
-                        }
+                        slugTouched = slugInput.value.trim().length > 0;
                     });
                 }
 
                 if (nameInput && slugInput) {
-                    nameInput.addEventListener('input', () => {
-                        if (slugManuallyEdited && slugInput.value.trim().length > 0) return;
+                    const updateSlug = debounce(() => {
+                        if (slugTouched && slugInput.value.trim().length > 0) return;
                         slugInput.value = slugify(nameInput.value);
-                        slugInput.dispatchEvent(new Event('input', {
-                            bubbles: true
-                        }));
+                        slugInput.dispatchEvent(new Event('input', { bubbles: true }));
                     });
+                    nameInput.addEventListener('input', updateSlug);
                 }
 
                 if (generateSkuButton && skuInput) {
