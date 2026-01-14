@@ -80,9 +80,9 @@
                             @endforeach
                         </div>
                         <div class="space-y-4 mt-4">
-                            <flux:input id="productNameInput" name="name" label="Product name"
+                            <flux:input id="productNameInput" name="name_ui" label="Product name"
                                 placeholder="Lumina Desk Lamp"
-                                value="{{ old('name', $translationValue('name', $defaultLocale)) }}"
+                                value="{{ old('name_ui', $translationValue('name', $defaultLocale)) }}"
                                 data-name-input />
 
                             @foreach ($locales as $code => $label)

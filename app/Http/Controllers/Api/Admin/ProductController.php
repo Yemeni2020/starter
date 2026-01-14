@@ -153,7 +153,7 @@ class ProductController extends Controller
         $payload = [];
 
         foreach ($fields as $field) {
-            $translations = $this->collectTranslations($data[$field . '_translations'] ?? [], $locales);
+            $translations = $this->collectTranslations($data[$field] ?? [], $locales);
             $payload["{$field}_translations"] = $translations;
             $fallback = $field === 'name' ? ($product?->name ?? '') : ($product?->description ?? '');
             $value = $this->fallbackTranslation($translations, $defaultLocale, $fallback);

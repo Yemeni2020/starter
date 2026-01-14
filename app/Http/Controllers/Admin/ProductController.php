@@ -47,6 +47,8 @@ class ProductController extends Controller
         }
 
         $data = $request->validate($this->productValidationRules($defaultLocale));
+        $data['name'] = $request->input('name', []);
+        $data['slug'] = $request->input('slug', []);
         $translationPayload = $this->prepareTranslationPayload($data, $supportedLocales, $defaultLocale);
         $data = array_merge($data, $translationPayload);
 
@@ -99,6 +101,8 @@ class ProductController extends Controller
         }
 
         $data = $request->validate($this->productValidationRules($defaultLocale, $product));
+        $data['name'] = $request->input('name', []);
+        $data['slug'] = $request->input('slug', []);
         $translationPayload = $this->prepareTranslationPayload($data, $supportedLocales, $defaultLocale);
         $data = array_merge($data, $translationPayload);
 

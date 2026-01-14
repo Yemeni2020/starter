@@ -17,20 +17,24 @@ class UpsertProductRequest extends FormRequest
         $locales = config('app.supported_locales', ['ar', 'en']);
         $defaultLocale = config('app.locale', 'ar');
 
-        $nameTranslations = $this->input('name_translations', []);
-        $slugs = $this->input('slug_translations', []);
+        $nameInput = $this->input('name', $this->input('name_translations', []));
+        $slugInput = $this->input('slug', $this->input('slug_translations', []));
+        $summaryInput = $this->input('summary', $this->input('summary_translations', []));
+        $descriptionInput = $this->input('description', $this->input('description_translations', []));
 
-        if (empty($slugs[$defaultLocale]) && !empty($nameTranslations[$defaultLocale])) {
-            $slugs[$defaultLocale] = Str::slug($nameTranslations[$defaultLocale]);
-            $this->merge(['slug_translations' => $slugs]);
+        if (empty($slugInput[$defaultLocale]) && !empty($nameInput[$defaultLocale])) {
+            $slugInput[$defaultLocale] = Str::slug($nameInput[$defaultLocale]);
         }
 
         foreach ($locales as $locale) {
-            $nameTranslations[$locale] = $nameTranslations[$locale] ?? '';
+            $nameInput[$locale] = $nameInput[$locale] ?? '';
         }
 
         $this->merge([
-            'name_translations' => $nameTranslations,
+            'name' => $nameInput,
+            'slug' => $slugInput,
+            'summary' => $summaryInput,
+            'description' => $descriptionInput,
         ]);
     }
 
@@ -43,12 +47,12 @@ class UpsertProductRequest extends FormRequest
             'brand_id' => ['nullable', 'exists:brands,id'],
             'category_ids' => ['nullable', 'array'],
             'category_ids.*' => ['exists:categories,id'],
-            'name_translations' => ['required', 'array'],
-            "name_translations.{$defaultLocale}" => ['required', 'string', 'max:255'],
-            'slug_translations' => ['nullable', 'array'],
-            "slug_translations.{$defaultLocale}" => ['nullable', 'string', 'max:255'],
-            'summary_translations' => ['nullable', 'array'],
-            'description_translations' => ['nullable', 'array'],
+            'name' => ['required', 'array'],
+            "name.{$defaultLocale}" => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'array'],
+            "slug.{$defaultLocale}" => ['nullable', 'string', 'max:255'],
+            'summary' => ['nullable', 'array'],
+            'description' => ['nullable', 'array'],
             'price' => ['required', 'numeric', 'min:0'],
             'compare_at_price' => ['nullable', 'numeric', 'min:0'],
             'sku' => ['nullable', 'string', 'max:255'],
@@ -123,10 +127,10 @@ class UpsertProductRequest extends FormRequest
         ];
 
         foreach ($locales as $locale) {
-            $rules["name_translations.{$locale}"] = $rules["name_translations.{$locale}"] ?? ['nullable', 'string', 'max:255'];
-            $rules["slug_translations.{$locale}"] = $rules["slug_translations.{$locale}"] ?? ['nullable', 'string', 'max:255'];
-            $rules["summary_translations.{$locale}"] = ['nullable', 'string', 'max:500'];
-            $rules["description_translations.{$locale}"] = ['nullable', 'string'];
+            $rules["name.{$locale}"] = $rules["name.{$locale}"] ?? ['nullable', 'string', 'max:255'];
+            $rules["slug.{$locale}"] = $rules["slug.{$locale}"] ?? ['nullable', 'string', 'max:255'];
+            $rules["summary.{$locale}"] = ['nullable', 'string', 'max:500'];
+            $rules["description.{$locale}"] = ['nullable', 'string'];
         }
 
         return $rules;

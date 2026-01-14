@@ -95,8 +95,8 @@
                         </div>
 
                         <div class="p-5 space-y-5">
-                            <flux:input id="productNameInput" name="name" label="Product name"
-                                placeholder="Lumina Desk Lamp" value="{{ old('name') }}" data-name-input />
+                            <flux:input id="productNameInput" name="name_ui" label="Product name"
+                                placeholder="Lumina Desk Lamp" value="{{ old('name_ui') }}" data-name-input />
 
                             @foreach ($locales as $code => $label)
                                 <div class="locale-panel {{ $code === $defaultLocale ? '' : 'hidden' }}"
