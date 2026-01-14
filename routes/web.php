@@ -36,6 +36,8 @@ Route::middleware(['auth', 'verified', 'admin'])
         Route::view('categories/create', 'admin.categories.create')->name('categories.create');
         Route::view('categories/{category}/edit', 'admin.categories.edit')->name('categories.edit');
 
+        Route::view('orders', 'admin.orders.index')->name('orders.index');
+
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('settings/seo', [SettingsController::class, 'updateSeo'])->name('settings.seo');
     });
