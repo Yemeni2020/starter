@@ -29,20 +29,25 @@
             }
             $selectedColorIds = array_map('intval', array_filter($selectedColorIds));
 
-            $existingImages = $product->images;
-            if (is_string($existingImages)) {
-                $existingImages = json_decode($existingImages, true);
+            $mediaItems = $product->mediaAssets->sortBy('position')->values();
+            $legacyImages = [];
+
+            if ($mediaItems->isEmpty()) {
+                $legacyImages = $product->images;
+                if (is_string($legacyImages)) {
+                    $legacyImages = json_decode($legacyImages, true);
+                }
+                if (!is_array($legacyImages)) {
+                    $legacyImages = [];
+                }
+                if (!$legacyImages && !empty($product->gallery)) {
+                    $legacyImages = is_array($product->gallery) ? $product->gallery : json_decode($product->gallery, true);
+                }
+                if (!$legacyImages && !empty($product->image)) {
+                    $legacyImages = [$product->image];
+                }
+                $legacyImages = array_values(array_filter((array) $legacyImages));
             }
-            if (!is_array($existingImages)) {
-                $existingImages = [];
-            }
-            if (!$existingImages && !empty($product->gallery)) {
-                $existingImages = is_array($product->gallery) ? $product->gallery : json_decode($product->gallery, true);
-            }
-            if (!$existingImages && !empty($product->image)) {
-                $existingImages = [$product->image];
-            }
-            $existingImages = array_values(array_filter((array) $existingImages));
         @endphp
 
         <form id="product-edit-form" class="grid gap-6 lg:grid-cols-[2fr_1fr]" method="POST" action="{{ route('admin.products.update', $product) }}" enctype="multipart/form-data">
@@ -144,30 +149,93 @@
                     <div class="flex flex-col gap-4">
                         <flux:heading size="lg" level="2">Media</flux:heading>
 
-                        @if ($existingImages)
+                        @if ($mediaItems->isNotEmpty())
                             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                @foreach ($existingImages as $image)
-                                    <div class="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
-                                        <img src="{{ $image }}" alt="Existing product image" class="h-32 w-full object-cover">
+                                @foreach ($mediaItems as $media)
+                                    @php
+                                        $mediaUrl = \Illuminate\Support\Str::startsWith($media->url, ['http://', 'https://'])
+                                            ? $media->url
+                                            : Storage::url($media->url);
+                                    @endphp
+                                    <div class="group overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
+                                        <div class="relative">
+                                            <img src="{{ $mediaUrl }}" alt="{{ __('Product image') }}" class="h-32 w-full object-cover">
+                                            <div class="absolute right-2 top-2 flex gap-2">
+                                                @if (! $media->is_primary)
+                                                    <form method="POST" action="{{ route('admin.products.images.primary', [$product, $media]) }}">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <button type="submit" class="rounded-md bg-white/90 px-2 py-1 text-[11px] font-semibold text-zinc-700 shadow">
+                                                            {{ __('Set primary') }}
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <span class="rounded-md bg-emerald-500/90 px-2 py-1 text-[11px] font-semibold text-white">
+                                                        {{ __('Primary') }}
+                                                    </span>
+                                                @endif
+                                                <form method="POST" action="{{ route('admin.products.images.destroy', [$product, $media]) }}" onsubmit="return confirm('{{ __('Delete this image?') }}');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="rounded-md bg-white/90 px-2 py-1 text-[11px] font-semibold text-rose-600 shadow">
+                                                        {{ __('Delete') }}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between px-2 py-2 text-[11px] font-semibold text-zinc-500">
+                                            <form method="POST" action="{{ route('admin.products.images.reorder', $product) }}">
+                                                @csrf
+                                                @method('PUT')
+                                                <input type="hidden" name="media_id" value="{{ $media->id }}">
+                                                <input type="hidden" name="direction" value="up">
+                                                <button type="submit" class="rounded-md border border-zinc-200 px-2 py-1 text-zinc-600 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-white">
+                                                    {{ __('Move up') }}
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="{{ route('admin.products.images.reorder', $product) }}">
+                                                @csrf
+                                                @method('PUT')
+                                                <input type="hidden" name="media_id" value="{{ $media->id }}">
+                                                <input type="hidden" name="direction" value="down">
+                                                <button type="submit" class="rounded-md border border-zinc-200 px-2 py-1 text-zinc-600 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-white">
+                                                    {{ __('Move down') }}
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
+                        @elseif (!empty($legacyImages))
+                            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                @foreach ($legacyImages as $image)
+                                    @php
+                                        $legacyUrl = \Illuminate\Support\Str::startsWith($image, ['http://', 'https://'])
+                                            ? $image
+                                            : Storage::url($image);
+                                    @endphp
+                                    <div class="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
+                                        <img src="{{ $legacyUrl }}" alt="{{ __('Product image') }}" class="h-32 w-full object-cover">
+                                    </div>
+                                @endforeach
+                            </div>
+                            <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                                {{ __('Re-upload images to manage ordering and deletion.') }}
+                            </p>
+                        @else
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                {{ __('No images uploaded yet.') }}
+                            </p>
                         @endif
 
-                        <div class="hidden grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-image-preview></div>
-
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/60">
-                                <x-placeholder-pattern class="absolute inset-0 size-full stroke-zinc-400/30 dark:stroke-white/10" />
-                                <div class="relative z-10 text-sm text-zinc-500">Primary image</div>
-                            </div>
-                            <div class="relative overflow-hidden rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/60">
-                                <x-placeholder-pattern class="absolute inset-0 size-full stroke-zinc-400/20 dark:stroke-white/10" />
-                                <div class="relative z-10 text-sm text-zinc-500">Add more media</div>
-                            </div>
-                        </div>
-
-                        <flux:input type="file" name="images[]" label="Replace images" multiple data-image-input />
+                        <form id="product-media-form" method="POST" action="{{ route('admin.products.images.store', $product) }}" enctype="multipart/form-data" class="space-y-3">
+                            @csrf
+                            <flux:input type="file" name="images[]" label="{{ __('Add more images') }}" multiple data-image-input />
+                            <div class="hidden grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-image-preview></div>
+                            <flux:button type="submit" variant="outline">
+                                {{ __('Upload images') }}
+                            </flux:button>
+                        </form>
                     </div>
                 </div>
             </div>

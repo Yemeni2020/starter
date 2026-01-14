@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ProductMediaReorderRequest;
+use App\Http\Requests\Admin\ProductMediaUploadRequest;
 use App\Models\Category;
 use App\Models\Color;
+use App\Models\MediaAsset;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -62,27 +66,20 @@ class ProductController extends Controller
         $colorIds = $this->sanitizeColorIds($request->input('color_ids', []));
         $data['colors'] = $this->resolveColorLabels($colorIds);
 
-        [$primary, $gallery] = $this->storeImages($request);
-        if ($primary !== null) {
-            $data['image'] = $primary;
-            $data['thumbnail'] = $primary;
-            $data['gallery'] = $gallery;
-
-            $allImages = $this->buildImageSet($primary, $gallery);
-            if ($allImages !== null) {
-                $data['images'] = $allImages;
-            }
-        }
-
         $product = Product::create($data);
         $product->colorOptions()->sync($colorIds);
 
-        return redirect()->route('admin.products.index')->with('status', 'Product created.');
+        if ($request->hasFile('images')) {
+            $this->storeProductImages($product, $request->file('images', []));
+            $this->syncProductMediaFields($product);
+        }
+
+        return redirect()->route('admin.products.index')->with('status', __('Product created.'));
     }
 
     public function edit(Product $product)
     {
-        $product->load('colorOptions');
+        $product->load('colorOptions', 'mediaAssets');
         $categories = Category::orderBy('name')->get();
         $colors = Color::orderBy('name')->get();
         return view('admin.products.edit', compact('product', 'categories', 'colors'));
@@ -117,28 +114,88 @@ class ProductController extends Controller
         $data['colors'] = $this->resolveColorLabels($colorIds);
 
         if ($request->hasFile('images')) {
-            [$primary, $gallery] = $this->storeImages($request);
-            $allImages = $this->buildImageSet($primary, $gallery);
-
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            foreach (($product->gallery ?? []) as $old) {
-                Storage::disk('public')->delete($old);
-            }
-
-            $data['image'] = $primary;
-            $data['thumbnail'] = $primary;
-            $data['gallery'] = $gallery;
-            if ($allImages !== null) {
-                $data['images'] = $allImages;
-            }
+            $this->storeProductImages($product, $request->file('images', []));
+            $this->syncProductMediaFields($product);
         }
 
         $product->update($data);
         $product->colorOptions()->sync($colorIds);
 
-        return redirect()->route('admin.products.edit', $product)->with('status', 'Product updated.');
+        return redirect()->route('admin.products.edit', $product)->with('status', __('Product updated.'));
+    }
+
+    public function uploadImages(ProductMediaUploadRequest $request, Product $product)
+    {
+        $this->authorize('update', $product);
+
+        $this->storeProductImages($product, $request->file('images', []));
+        $this->syncProductMediaFields($product);
+
+        return redirect()->back()->with('status', __('Images uploaded.'));
+    }
+
+    public function deleteImage(Product $product, MediaAsset $media)
+    {
+        $this->authorize('update', $product);
+
+        if ($media->product_id !== $product->id) {
+            abort(404);
+        }
+
+        Storage::disk('public')->delete($media->url);
+        $media->delete();
+
+        $this->ensurePrimaryMedia($product);
+        $this->syncProductMediaFields($product);
+
+        return redirect()->back()->with('status', __('Image removed.'));
+    }
+
+    public function reorderImages(ProductMediaReorderRequest $request, Product $product)
+    {
+        $this->authorize('update', $product);
+
+        $media = MediaAsset::query()
+            ->where('product_id', $product->id)
+            ->findOrFail($request->input('media_id'));
+
+        $direction = $request->input('direction');
+        $neighborQuery = MediaAsset::query()
+            ->where('product_id', $product->id)
+            ->where('id', '<>', $media->id);
+
+        $neighbor = $direction === 'up'
+            ? $neighborQuery->where('position', '<', $media->position)->orderByDesc('position')->first()
+            : $neighborQuery->where('position', '>', $media->position)->orderBy('position')->first();
+
+        if (! $neighbor) {
+            return redirect()->back();
+        }
+
+        DB::transaction(function () use ($media, $neighbor) {
+            $current = $media->position;
+            $media->update(['position' => $neighbor->position]);
+            $neighbor->update(['position' => $current]);
+        });
+
+        $this->syncProductMediaFields($product);
+
+        return redirect()->back()->with('status', __('Image order updated.'));
+    }
+
+    public function setPrimaryImage(Product $product, MediaAsset $media)
+    {
+        $this->authorize('update', $product);
+
+        if ($media->product_id !== $product->id) {
+            abort(404);
+        }
+
+        $product->mediaAssets()->update(['is_primary' => false]);
+        $media->update(['is_primary' => true]);
+        $this->syncProductMediaFields($product);
+
+        return redirect()->back()->with('status', __('Primary image updated.'));
     }
 
     private function normalizeFeatures(mixed $featuresInput, ?string $fallbackDescription, int $take = 5): array
@@ -168,37 +225,65 @@ class ProductController extends Controller
         return [];
     }
 
-    private function storeImages(Request $request): array
+    private function storeProductImages(Product $product, array $files): void
     {
-        $files = $request->file('images', []);
-
-        if (!is_array($files) || count($files) === 0) {
-            return [null, null];
+        if (empty($files)) {
+            return;
         }
 
-        $paths = [];
-        foreach ($files as $file) {
-            $paths[] = Storage::disk('public')->putFile('product', $file);
+        $position = (int) ($product->mediaAssets()->max('position') ?? -1);
+        $hasPrimary = $product->mediaAssets()->where('is_primary', true)->exists();
+
+        foreach ($files as $index => $file) {
+            $path = Storage::disk('public')->putFile('product', $file);
+
+            MediaAsset::create([
+                'product_id' => $product->id,
+                'url' => $path,
+                'type' => 'image',
+                'position' => $position + $index + 1,
+                'is_primary' => ! $hasPrimary && $index === 0,
+            ]);
         }
-
-        $primary = array_shift($paths);
-        $gallery = count($paths) ? $paths : null;
-
-        return [$primary, $gallery];
     }
 
-    private function buildImageSet(?string $primary, ?array $gallery): ?array
+    private function syncProductMediaFields(Product $product): void
     {
-        if (!$primary) {
-            return null;
+        $this->ensurePrimaryMedia($product);
+
+        $media = $product->mediaAssets()->orderBy('position')->get();
+        if ($media->isEmpty()) {
+            $product->update([
+                'image' => null,
+                'thumbnail' => null,
+                'gallery' => null,
+                'images' => null,
+            ]);
+            return;
         }
 
-        $images = [$primary];
-        if (is_array($gallery)) {
-            $images = array_merge($images, $gallery);
+        $primary = $media->firstWhere('is_primary', true) ?? $media->first();
+        $urls = $media->pluck('url')->values()->all();
+        $gallery = count($urls) > 1 ? array_slice($urls, 1) : null;
+
+        $product->update([
+            'image' => $primary->url,
+            'thumbnail' => $primary->url,
+            'gallery' => $gallery,
+            'images' => $urls,
+        ]);
+    }
+
+    private function ensurePrimaryMedia(Product $product): void
+    {
+        if ($product->mediaAssets()->where('is_primary', true)->exists()) {
+            return;
         }
 
-        return array_values($images);
+        $first = $product->mediaAssets()->orderBy('position')->first();
+        if ($first) {
+            $first->update(['is_primary' => true]);
+        }
     }
 
     private function sanitizeColorIds(mixed $input): array

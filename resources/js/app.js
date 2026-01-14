@@ -294,6 +294,7 @@
     const initProductForms = () => {
         initProductForm(document.getElementById('product-create-form'));
         initProductForm(document.getElementById('product-edit-form'));
+        initImagePreview(document.getElementById('product-media-form'));
     };
 
     document.addEventListener('DOMContentLoaded', initProductForms);

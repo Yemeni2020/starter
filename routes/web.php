@@ -36,6 +36,10 @@ Route::middleware(['auth', 'verified', 'admin'])
         Route::post('products', [ProductController::class, 'store'])->name('products.store');
         Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
         Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
+        Route::post('products/{product}/images', [ProductController::class, 'uploadImages'])->name('products.images.store');
+        Route::delete('products/{product}/images/{media}', [ProductController::class, 'deleteImage'])->name('products.images.destroy');
+        Route::put('products/{product}/images/reorder', [ProductController::class, 'reorderImages'])->name('products.images.reorder');
+        Route::put('products/{product}/images/{media}/primary', [ProductController::class, 'setPrimaryImage'])->name('products.images.primary');
 
         Route::get('colors', [ColorController::class, 'index'])->name('colors.index');
         Route::get('colors/create', [ColorController::class, 'create'])->name('colors.create');
