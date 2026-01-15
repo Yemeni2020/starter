@@ -2,10 +2,10 @@
 
 return [
     'dashboard' => [
-        'title' => 'Dashboard',
+        'title' => 'Dashboardssss',
     ],
     'translations' => [
-        'title' => 'Translation manager',
+        'title' => 'Translation managers',
         'subtitle' => 'Manage custom translation keys and overrides.',
         'search_label' => 'Search',
         'search_placeholder' => 'Search keys or text',
@@ -30,5 +30,30 @@ return [
         'manager_link' => 'Open translation manager',
         'manage_help' => 'Manage custom translation keys and overrides in the translation manager.',
         'empty' => 'No translations found.',
+        'admin' => 'Admin',
+        'control_panel' => 'Control Panel',
+        // 'platform' => 'Platform',
+        // 'catalog' => 'Catalog',
+        // 'sales' => 'Sales',
+        // 'insights' => 'Insights',
+        // 'System' => 'System',
     ],
+    'sidebar' => [
+        'admin' => 'Admin',
+        'dashboard' => 'Dashboard',
+        'products' => 'Products',
+        'categories' => 'Categories',
+        'colors' => 'Colors',
+        'orders' => 'Orders',
+        'settings' => 'Settings',
+        'translations' => 'Translations',
+        'repository' => 'Repository',
+        'documentation' => 'Documentation',
+        'logout' => 'Log Out',
+    ],
+    'platform' => 'Platform',
+        'catalog' => 'Catalog',
+        'sales' => 'Sales',
+        'insights' => 'Insights',
+        'System' => 'System',
 ];

@@ -95,6 +95,7 @@
                         </div>
 
                         <div class="p-5 space-y-5">
+                            {{-- UI name input (syncs to default locale) --}}
                             <flux:input id="productNameInput" name="name_ui" label="Product name"
                                 placeholder="Lumina Desk Lamp" value="{{ old('name_ui') }}" data-name-input />
 
@@ -137,11 +138,11 @@
                                     </div>
 
                                     <flux:textarea name="description[{{ $code }}]" label="Description"
-                                        rows="6" placeholder="Write a short description for the product.">
-                                        {{ $translationValue('description', $code) }}</flux:textarea>
+                                        rows="6" placeholder="Write a short description for the product.">{{ $translationValue('description', $code) }}</flux:textarea>
                                 </div>
                             @endforeach
 
+                            {{-- SEO overrides --}}
                             <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
                                 <div class="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{{ __('SEO overrides') }}</div>
                                 <div class="mt-3 grid gap-4">
@@ -155,8 +156,7 @@
                                 <flux:select name="category_id" label="Category" required>
                                     <flux:select.option value="">Select category</flux:select.option>
                                     @foreach ($categories as $category)
-                                        <flux:select.option value="{{ $category->id }}">{{ $category->name }}
-                                        </flux:select.option>
+                                        <flux:select.option value="{{ $category->id }}">{{ $category->name }}</flux:select.option>
                                     @endforeach
                                 </flux:select>
 
@@ -165,6 +165,7 @@
                             </div>
 
                             <div class="grid gap-4 md:grid-cols-2">
+                                {{-- Color options partial --}}
                                 @include('admin.products.partials.color-options', [
                                     'colors' => $colors,
                                     'selectedColorIds' => $selectedColorIds,
@@ -172,8 +173,7 @@
 
                                 <div class="space-y-2">
                                     <div class="flex items-end gap-2">
-                                        <flux:input id="skuInput" name="sku" label="SKU" placeholder="PRD-1042"
-                                            required />
+                                        <flux:input id="skuInput" name="sku" label="SKU" placeholder="PRD-1042" required />
                                         <flux:button id="generateSkuButton" type="button" variant="outline">
                                             Generate
                                         </flux:button>
@@ -193,8 +193,7 @@
                         class="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                         <div class="border-b border-zinc-100 p-5 dark:border-zinc-800">
                             <h2 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">Media</h2>
-                            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Upload product images (multiple
-                                supported).</p>
+                            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Upload product images (multiple supported).</p>
                         </div>
 
                         <div class="p-5 space-y-4">
@@ -228,10 +227,8 @@
                             <h2 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">Pricing</h2>
                         </div>
                         <div class="p-5 space-y-4">
-                            <flux:input name="price" label="Price" type="number" step="0.01"
-                                placeholder="129.00" required />
-                            <flux:input name="compare_at_price" label="Compare at" type="number" step="0.01"
-                                placeholder="149.00" />
+                            <flux:input name="price" label="Price" type="number" step="0.01" placeholder="129.00" required />
+                            <flux:input name="compare_at_price" label="Compare at" type="number" step="0.01" placeholder="149.00" />
                             <div class="text-xs text-zinc-500 dark:text-zinc-400">
                                 “Compare at” shows discount pricing (optional).
                             </div>
@@ -244,8 +241,7 @@
                             <h2 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">Inventory</h2>
                         </div>
                         <div class="p-5 space-y-4">
-                            <flux:input name="stock" label="Available stock" type="number" placeholder="84"
-                                required />
+                            <flux:input name="stock" label="Available stock" type="number" placeholder="84" required />
                             <flux:input name="weight_grams" label="Weight (grams)" type="number" placeholder="850" />
                         </div>
                     </section>
@@ -261,8 +257,7 @@
                                 <flux:select.option value="0">Draft</flux:select.option>
                             </flux:select>
 
-                            <div
-                                class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
                                 <div class="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Badges</div>
                                 <div class="mt-3 grid gap-3">
                                     <flux:checkbox name="is_best_seller" label="Best Sellers" />
@@ -276,7 +271,192 @@
             </form>
         </div>
     </div>
-
 @endsection
 
+@push('scripts')
+<script>
+(function () {
+    const defaultLocale = @json($defaultLocale);
+    const defaultLocaleSuffix = @json($defaultLocaleSuffix);
+
+    // IMPORTANT: if you have $locales in blade, pass it to JS for safe looping
+    const localesMap = @json($locales); // { ar: "Arabic", en: "English" }
+    const localeCodes = Object.keys(localesMap || {});
+
+    const slugify = (value) =>
+        (value || '')
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+
+    const initProductCreate = () => {
+        // SKU
+        const generateSkuButton = document.getElementById('generateSkuButton');
+        const skuInput = document.getElementById('skuInput');
+
+        if (generateSkuButton && skuInput) {
+            const generateSku = () => {
+                const stamp = Date.now().toString().slice(-4);
+                const random = Math.random().toString(36).slice(2, 6).toUpperCase();
+                return `PRD-${stamp}${random}`;
+            };
+
+            generateSkuButton.addEventListener('click', () => {
+                skuInput.value = generateSku();
+                skuInput.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        }
+
+        // Locale tabs (use data-tab-active/inactive)
+        const buttons = document.querySelectorAll('[data-product-tab]');
+        const panels = document.querySelectorAll('[data-locale-panel]');
+
+        // --- NAME SYNC HELPERS (UI name <-> active locale name + slug) ---
+        const uiNameInput = document.querySelector('[data-name-input]');
+
+        const getActiveLocale = () => {
+            const activeBtn = document.querySelector('[data-product-tab].is-active');
+            return activeBtn?.getAttribute('data-product-tab') || defaultLocale;
+        };
+
+        const cap = (s) => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
+
+        const getLocaleNameInput = (locale) =>
+            document.getElementById(`productName${cap(locale)}Input`);
+
+        const getLocaleSlugInput = (locale) =>
+            document.getElementById(`slug${cap(locale)}Input`);
+
+        const setUiFromLocale = (locale) => {
+            if (!uiNameInput) return;
+            const nameInput = getLocaleNameInput(locale);
+            uiNameInput.value = nameInput?.value || '';
+        };
+
+        // Track manual slug per locale
+        const slugManual = new Map();
+        const isSlugManual = (locale) => slugManual.get(locale) === true;
+
+        const bindSlugManualTracking = (locale) => {
+            const slugInput = getLocaleSlugInput(locale);
+            if (!slugInput) return;
+
+            slugInput.addEventListener('input', (event) => {
+                if (!event.isTrusted) return;
+                const v = slugInput.value.trim();
+                slugManual.set(locale, v.length > 0);
+                if (v.length === 0) slugManual.set(locale, false);
+            });
+        };
+
+        // Bind slug tracking for all locales
+        localeCodes.forEach((locale) => bindSlugManualTracking(locale));
+
+        // When user types in UI name: update ACTIVE locale name + slug
+        if (uiNameInput) {
+            uiNameInput.addEventListener('input', () => {
+                const locale = getActiveLocale();
+                const nameInput = getLocaleNameInput(locale);
+                const slugInput = getLocaleSlugInput(locale);
+
+                if (nameInput) {
+                    nameInput.value = uiNameInput.value;
+                    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+
+                if (slugInput && !isSlugManual(locale)) {
+                    slugInput.value = slugify(uiNameInput.value);
+                    slugInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        }
+        // --- END NAME SYNC HELPERS ---
+
+        const setActive = (target) => {
+            buttons.forEach((btn) => {
+                const code = btn.getAttribute('data-product-tab');
+                const isActive = code === target;
+
+                // mark active button
+                btn.classList.toggle('is-active', isActive);
+
+                const active = (btn.getAttribute('data-tab-active') || '').split(' ').filter(Boolean);
+                const inactive = (btn.getAttribute('data-tab-inactive') || '').split(' ').filter(Boolean);
+
+                // remove both sets first (avoid leftovers)
+                [...active, ...inactive].forEach(cls => btn.classList.remove(cls));
+
+                if (isActive) active.forEach(cls => btn.classList.add(cls));
+                else inactive.forEach(cls => btn.classList.add(cls));
+            });
+
+            panels.forEach((panel) => {
+                panel.classList.toggle('hidden', panel.getAttribute('data-locale-panel') !== target);
+            });
+
+            // IMPORTANT: update top UI name when switching locale tab
+            setUiFromLocale(target);
+        };
+
+        const hasTab = (value) => Array.from(buttons).some((b) => b.getAttribute('data-product-tab') === value);
+        const defaultTab = hasTab(defaultLocale) ? defaultLocale : buttons[0]?.getAttribute('data-product-tab');
+        if (defaultTab) setActive(defaultTab);
+
+        buttons.forEach((btn) =>
+            btn.addEventListener('click', () => setActive(btn.getAttribute('data-product-tab')))
+        );
+
+        // Initial fill of UI name from active tab
+        if (defaultTab) setUiFromLocale(defaultTab);
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initProductCreate);
+    } else {
+        initProductCreate();
+    }
+})();
+
+// Image preview
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.querySelector('[data-image-input]');
+    const preview = document.querySelector('[data-image-preview]');
+    if (!input || !preview) return;
+
+    const render = (files) => {
+        preview.innerHTML = '';
+        if (!files || files.length === 0) {
+            preview.classList.add('hidden');
+            return;
+        }
+        preview.classList.remove('hidden');
+
+        Array.from(files).forEach((file) => {
+            if (!file.type.startsWith('image/')) return;
+
+            const url = URL.createObjectURL(file);
+
+            const card = document.createElement('div');
+            card.className =
+                'group overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950';
+
+            card.innerHTML = `
+                <div class="aspect-[4/3] overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+                    <img src="${url}" alt="" class="h-full w-full object-cover transition group-hover:scale-[1.02]" />
+                </div>
+                <div class="p-3">
+                    <div class="truncate text-xs font-semibold text-zinc-700 dark:text-zinc-200">${file.name}</div>
+                    <div class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">${Math.round(file.size / 1024)} KB</div>
+                </div>
+            `;
+
+            preview.appendChild(card);
+        });
+    };
+
+    input.addEventListener('change', () => render(input.files));
+});
+</script>
+@endpush
 
